@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>タスク完了状況カレンダー</title>
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body {
+      font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+      margin: 0;
+      padding: 16px;
+      background-color: #f7f7f7;
+      color: #333;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      font-size: 1.5rem;
+      color: #06c755;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .month-selector {
+      display: flex;
+      align-items: center;
+    }
+    .month-btn {
+      background: #06c755;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 12px;
+      font-size: 14px;
+      cursor: pointer;
+      margin: 0 5px;
+    }
+    .current-month {
+      font-weight: bold;
+      font-size: 1.2rem;
+      margin: 0 10px;
+    }
+    .task-filter select {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .calendar {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    .calendar th {
+      background-color: #f2f2f2;
+      padding: 10px;
+      text-align: center;
+      border: 1px solid #ddd;
+    }
+    .calendar td {
+      border: 1px solid #ddd;
+      padding: 5px;
+      height: 80px;
+      vertical-align: top;
+    }
+    .date-number {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .completion-dot {
+      height: 10px;
+      width: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 5px;
+      background-color: #06c755;
+    }
+    .other-month {
+      color: #aaa;
+      background-color: #f9f9f9;
+    }
+    .today {
+      background-color: #fff5e6;
+    }
+    .completion-list {
+      margin-top: 10px;
+      font-size: 12px;
+    }
+    .task-item {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+    .loading {
+      text-align: center;
+      margin: 20px 0;
+    }
+    .user-legend {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: #f9f9f9;
+    }
+    .user-legend h3 {
+      margin-top: 0;
+      font-size: 1rem;
+    }
+    .user-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .user-color {
+      height: 10px;
+      width: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 5px;
+    }
+    .error-message {
+      color: #ff6b6b;
+      text-align: center;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>タスク完了状況カレンダー</h1>
+    
+    <div id="auth-message" style="display: none; text-align: center; margin-bottom: 20px;">
+      LINEログインが必要です。
+    </div>
+    
+    <div id="calendar-container" style="display: none;">
+      <div class="controls">
+        <div class="month-selector">
+          <button id="prev-month" class="month-btn">前月</button>
+          <div id="current-month" class="current-month">2025年4月</div>
+          <button id="next-month" class="month-btn">次月</button>
+        </div>
+        
+        <div class="task-filter">
+          <select id="task-selector">
+            <option value="all">すべてのタスク</option>
+            <!-- タスク一覧がここに動的に追加されます -->
+          </select>
+        </div>
+      </div>
+      
+      <table class="calendar">
+        <thead>
+          <tr>
+            <th>日</th>
+            <th>月</th>
+            <th>火</th>
+            <th>水</th>
+            <th>木</th>
+            <th>金</th>
+            <th>土</th>
+          </tr>
+        </thead>
+        <tbody id="calendar-body">
+          <!-- カレンダーの内容がここに動的に追加されます -->
+        </tbody>
+      </table>
+      
+      <div id="user-legend" class="user-legend">
+        <h3>ユーザー</h3>
+        <!-- ユーザー凡例がここに動的に追加されます -->
+      </div>
+    </div>
+    
+    <div id="loading" class="loading">
+      <p>読み込み中...</p>
+    </div>
+    
+    <div id="error-message" class="error-message"></div>
+  </div>
+
+  <script>
+    // グローバル変数
+    let groupId = '';
+    let userId = '';
+    let displayName = '';
+    let tasks = [];
+    let completions = [];
+    let users = [];
+    let currentDate = new Date();
+    let selectedTaskId = 'all';
+    
+    // 曜日の配列
+    const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+    
+    // ユーザーカラーマップ
+    const userColors = {};
+    const colorPalette = [
+      '#06c755', '#ff6b6b', '#3498db', '#f39c12', '#9b59b6',
+      '#2ecc71', '#e74c3c', '#1abc9c', '#f1c40f', '#34495e'
+    ];
+    
+    // LIFFの初期化
+    document.addEventListener('DOMContentLoaded', () => {
+      initializeLiff();
+    });
+    
+    // LIFF初期化関数
+    async function initializeLiff() {
+      try {
+        // タスク一覧の取得
+        const tasksResponse = await fetch(`あなたのGAS WebアプリのURL?action=getTasks&groupId=${groupId}`);
+        const tasksData = await tasksResponse.json();
+        
+        if (tasksData.success) {
+          tasks = tasksData.tasks.filter(task => task.status !== 'deleted');
+          
+          // タスクセレクタにオプションを追加
+          const taskSelector = document.getElementById('task-selector');
+          taskSelector.innerHTML = '<option value="all">すべてのタスク</option>';
+          
+          tasks.forEach(task => {
+            const option = document.createElement('option');
+            option.value = task.id;
+            option.textContent = task.name;
+            taskSelector.appendChild(option);
+          });
+        } else {
+          throw new Error('タスクの取得に失敗しました');
+        }
+        
+        // ユーザー一覧の取得
+        const usersResponse = await fetch(`あなたのGAS WebアプリのURL?action=getGroupUsers&groupId=${groupId}`);
+        const usersData = await usersResponse.json();
+        
+        if (usersData.success) {
+          users = usersData.users;
+          
+          // ユーザーごとに色を割り当てる
+          users.forEach((user, index) => {
+            userColors[user.id] = colorPalette[index % colorPalette.length];
+          });
+          
+          // ユーザー凡例の表示
+          const userLegend = document.getElementById('user-legend');
+          userLegend.innerHTML = '<h3>ユーザー</h3>';
+          
+          users.forEach(user => {
+            const userItem = document.createElement('div');
+            userItem.className = 'user-item';
+            
+            const userColor = document.createElement('div');
+            userColor.className = 'user-color';
+            userColor.style.backgroundColor = userColors[user.id];
+            
+            const userName = document.createElement('span');
+            userName.textContent = user.displayName;
+            
+            userItem.appendChild(userColor);
+            userItem.appendChild(userName);
+            userLegend.appendChild(userItem);
+          });
+        } else {
+          throw new Error('ユーザーの取得に失敗しました');
+        }
+        
+        // 今月の完了記録を取得
+        await loadCompletions();
+      } catch (error) {
+        console.error('データ読み込みエラー', error);
+        document.getElementById('error-message').textContent = error.message;
+      }
+    }
+    
+    // 完了記録の読み込み
+    async function loadCompletions() {
+      try {
+        // 表示する月の範囲を計算
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        
+        // ISO形式の日付文字列に変換
+        const startDate = firstDay.toISOString();
+        const endDate = lastDay.toISOString();
+        
+        // 完了記録の取得
+        const completionsResponse = await fetch(
+          `あなたのGAS WebアプリのURL?action=getGroupCompletions&groupId=${groupId}&startDate=${startDate}&endDate=${endDate}`
+        );
+        const completionsData = await completionsResponse.json();
+        
+        if (completionsData.success) {
+          completions = completionsData.completions;
+        } else {
+          throw new Error('完了記録の取得に失敗しました');
+        }
+      } catch (error) {
+        console.error('完了記録読み込みエラー', error);
+        document.getElementById('error-message').textContent = error.message;
+      }
+    }
+    
+    // 月表示の更新
+    function updateMonthDisplay() {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth() + 1;
+      document.getElementById('current-month').textContent = `${year}年${month}月`;
+    }
+    
+    // カレンダーの生成
+    function generateCalendar() {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      
+      // 月の初日と最終日
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      
+      // 月の初日の曜日と日数
+      const firstDayOfWeek = firstDay.getDay();
+      const daysInMonth = lastDay.getDate();
+      
+      // 前月の最終日
+      const prevMonthLastDay = new Date(year, month, 0).getDate();
+      
+      // カレンダーの行数を計算
+      const rows = Math.ceil((firstDayOfWeek + daysInMonth) / 7);
+      
+      // カレンダー本体のDOM生成
+      const calendarBody = document.getElementById('calendar-body');
+      calendarBody.innerHTML = '';
+      
+      let date = 1;
+      let nextMonthDay = 1;
+      
+      // 今日の日付
+      const today = new Date();
+      const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+      
+      // カレンダーの行を生成
+      for (let i = 0; i < rows; i++) {
+        const row = document.createElement('tr');
+        
+        // 各曜日のセルを生成
+        for (let j = 0; j < 7; j++) {
+          const cell = document.createElement('td');
+          
+          // 前月の日付
+          if (i === 0 && j < firstDayOfWeek) {
+            const prevDate = prevMonthLastDay - firstDayOfWeek + j + 1;
+            cell.innerHTML = `<div class="date-number">${prevDate}</div>`;
+            cell.className = 'other-month';
+          }
+          // 当月の日付
+          else if (date <= daysInMonth) {
+            const dateDiv = document.createElement('div');
+            dateDiv.className = 'date-number';
+            dateDiv.textContent = date;
+            
+            // 今日の日付を強調
+            if (isCurrentMonth && date === today.getDate()) {
+              cell.className = 'today';
+            }
+            
+            cell.appendChild(dateDiv);
+            
+            // この日付の完了記録を表示
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+            addCompletionsToCell(cell, dateStr);
+            
+            date++;
+          }
+          // 翌月の日付
+          else {
+            cell.innerHTML = `<div class="date-number">${nextMonthDay}</div>`;
+            cell.className = 'other-month';
+            nextMonthDay++;
+          }
+          
+          row.appendChild(cell);
+        }
+        
+        calendarBody.appendChild(row);
+      }
+    }
+    
+    // セルに完了記録を追加
+    function addCompletionsToCell(cell, dateStr) {
+      // 日付が一致する完了記録をフィルタリング
+      const dateCompletions = completions.filter(comp => {
+        const compDate = new Date(comp.completedAt);
+        return compDate.toISOString().split('T')[0] === dateStr &&
+               (selectedTaskId === 'all' || comp.taskId === selectedTaskId);
+      });
+      
+      if (dateCompletions.length > 0) {
+        const completionList = document.createElement('div');
+        completionList.className = 'completion-list';
+        
+        // タスクIDごとにグループ化
+        const taskCompletions = {};
+        dateCompletions.forEach(comp => {
+          if (!taskCompletions[comp.taskId]) {
+            taskCompletions[comp.taskId] = {
+              taskName: comp.taskName,
+              users: []
+            };
+          }
+          taskCompletions[comp.taskId].users.push(comp.userId);
+        });
+        
+        // タスクごとに表示
+        Object.keys(taskCompletions).forEach(taskId => {
+          const taskItem = document.createElement('div');
+          taskItem.className = 'task-item';
+          
+          const taskInfo = taskCompletions[taskId];
+          
+          // ユーザーのドットを表示
+          taskInfo.users.forEach(userId => {
+            const dot = document.createElement('span');
+            dot.className = 'completion-dot';
+            dot.style.backgroundColor = userColors[userId] || '#06c755';
+            taskItem.appendChild(dot);
+          });
+          
+          // タスク名
+          const taskName = document.createElement('span');
+          taskName.textContent = taskInfo.taskName;
+          taskItem.appendChild(taskName);
+          
+          completionList.appendChild(taskItem);
+        });
+        
+        cell.appendChild(completionList);
+      }
+    }
+  </script>
+</body>
+</html> LIFFの初期化
+        await liff.init({ liffId: "2007279800" });
+        
+        // URLパラメータからグループIDを取得
+        const urlParams = new URLSearchParams(window.location.search);
+        groupId = urlParams.get('groupId');
+        
+        // ログインしているかどうかを確認
+        if (!liff.isLoggedIn()) {
+          // ログインしていない場合はログインを促す
+          document.getElementById('auth-message').style.display = 'block';
+          document.getElementById('auth-message').innerHTML = 'LINEログインが必要です。<br><button onclick="liff.login()">ログイン</button>';
+          return;
+        }
+        
+        // ユーザープロフィールの取得
+        const profile = await liff.getProfile();
+        userId = profile.userId;
+        displayName = profile.displayName;
+        
+        // データの読み込み
+        await loadData();
+        
+        // カレンダーの表示
+        document.getElementById('calendar-container').style.display = 'block';
+        
+        // 現在の年月を表示
+        updateMonthDisplay();
+        
+        // カレンダーを生成
+        generateCalendar();
+        
+        // イベントリスナーの追加
+        document.getElementById('prev-month').addEventListener('click', () => {
+          currentDate.setMonth(currentDate.getMonth() - 1);
+          updateMonthDisplay();
+          generateCalendar();
+        });
+        
+        document.getElementById('next-month').addEventListener('click', () => {
+          currentDate.setMonth(currentDate.getMonth() + 1);
+          updateMonthDisplay();
+          generateCalendar();
+        });
+        
+        document.getElementById('task-selector').addEventListener('change', (e) => {
+          selectedTaskId = e.target.value;
+          generateCalendar();
+        });
+        
+      } catch (error) {
+        console.error('LIFF initialization failed', error);
+        document.getElementById('error-message').textContent = 'エラーが発生しました: ' + error.message;
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+      }
+    }
+    
+    // データの読み込み
+    async function loadData() {
+      try {
+        //
