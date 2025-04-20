@@ -71,19 +71,48 @@
       if (queryString) {
         queryParams = '?' + queryString;
       }
+
+      // ----- 検証用
+      // index.html内のwindow.onload関数内のリダイレクト部分の前に追加
+      console.log('デバッグ情報:');
+      console.log('Type: ' + type);
+      console.log('GroupId: ' + groupId);
+      console.log('QueryParams: ' + queryParams);
+      console.log('Full URL: ' + window.location.href);
+      console.log('Search: ' + window.location.search);
+      console.log('参照元URL: ' + document.referrer);
       
       // タイプに応じてリダイレクト
       setTimeout(function() {
+        console.log('リダイレクト開始...');
+        
         if (type === 'calendar') {
+          console.log('カレンダーページへリダイレクト');
           window.location.href = './calendar.html' + queryParams;
         } else if (type === 'task') {
+          console.log('タスクページへリダイレクト');
           window.location.href = './task.html' + queryParams;
         } else if (groupId) {
-          // typeが指定されていないがgroupIdがある場合はデフォルトでtaskに
+          console.log('グループIDあり、タスクページへデフォルトリダイレクト');
           window.location.href = './task.html' + queryParams;
+        } else {
+          console.log('リダイレクト条件に合致しませんでした');
         }
-        // どちらも指定されていない場合はそのまま
-      }, 500); // 少し遅延させてリダイレクト画面を見せる
+      }, 500);
+      // -----
+      
+      // タイプに応じてリダイレクト（origin）
+      // setTimeout(function() {
+      //   if (type === 'calendar') {
+      //     window.location.href = './calendar.html' + queryParams;
+      //   } else if (type === 'task') {
+      //     window.location.href = './task.html' + queryParams;
+      //   } else if (groupId) {
+      //     // typeが指定されていないがgroupIdがある場合はデフォルトでtaskに
+      //     window.location.href = './task.html' + queryParams;
+      //   }
+      //   // どちらも指定されていない場合はそのまま
+      // }, 500); // 少し遅延させてリダイレクト画面を見せる
     };
   </script>
 </head>
@@ -93,5 +122,48 @@
     <p>リダイレクト中です...</p>
     <div class="loader"></div>
   </div>
+  <!-- index.htmlの<body>内に追加 -->
+<div id="debug-output" style="background-color: #f0f0f0; padding: 10px; margin-top: 20px; border: 1px solid #ccc; word-break: break-all; font-size: 12px;"></div>
+
+<script>
+  // console.logをオーバーライドしてページに出力する
+  (function() {
+    // 元のconsole.logを保存
+    var originalLog = console.log;
+    
+    // デバッグ出力用の関数
+    function appendToDebugOutput(message) {
+      var debugOutput = document.getElementById('debug-output');
+      if (debugOutput) {
+        var line = document.createElement('div');
+        line.style.borderBottom = '1px dotted #ccc';
+        line.style.padding = '5px 0';
+        
+        if (typeof message === 'object') {
+          try {
+            line.textContent = JSON.stringify(message);
+          } catch (e) {
+            line.textContent = "Object: " + Object.keys(message).join(', ');
+          }
+        } else {
+          line.textContent = message;
+        }
+        
+        debugOutput.appendChild(line);
+      }
+    }
+    
+    // console.logをオーバーライド
+    console.log = function() {
+      // 元のconsole.logを呼び出す
+      originalLog.apply(console, arguments);
+      
+      // 各引数を画面に出力
+      for (var i = 0; i < arguments.length; i++) {
+        appendToDebugOutput(arguments[i]);
+      }
+    };
+  })();
+</script>
 </body>
 </html>
