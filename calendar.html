@@ -193,6 +193,9 @@
   </div>
 
   <script>
+    // Webhook URLを設定 (GAS再デプロイ時にここだけ変更)
+    const GAS_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbxhW9xwQWmhAMLk4_srFyKjQjx7o-IuLokel50KcHV93JJeqt3WmU8CZqNmGVI-Xgie/exec';
+    
     // グローバル変数
     let groupId = '';
     let userId = '';
@@ -221,8 +224,69 @@
     // LIFF初期化関数
     async function initializeLiff() {
       try {
+        // LIFFの初期化
+        await liff.init({ liffId: "2007280757-OAJQWGP8" }); // LINEミニアプリで取得したLIFF IDに置き換えてください
+        
+        // URLパラメータからグループIDを取得
+        const urlParams = new URLSearchParams(window.location.search);
+        groupId = urlParams.get('groupId');
+        
+        // ログインしているかどうかを確認
+        if (!liff.isLoggedIn()) {
+          // ログインしていない場合はログインを促す
+          document.getElementById('auth-message').style.display = 'block';
+          document.getElementById('auth-message').innerHTML = 'LINEログインが必要です。<br><button onclick="liff.login()">ログイン</button>';
+          return;
+        }
+        
+        // ユーザープロフィールの取得
+        const profile = await liff.getProfile();
+        userId = profile.userId;
+        displayName = profile.displayName;
+        
+        // データの読み込み
+        await loadData();
+        
+        // カレンダーの表示
+        document.getElementById('calendar-container').style.display = 'block';
+        
+        // 現在の年月を表示
+        updateMonthDisplay();
+        
+        // カレンダーを生成
+        generateCalendar();
+        
+        // イベントリスナーの追加
+        document.getElementById('prev-month').addEventListener('click', () => {
+          currentDate.setMonth(currentDate.getMonth() - 1);
+          updateMonthDisplay();
+          generateCalendar();
+        });
+        
+        document.getElementById('next-month').addEventListener('click', () => {
+          currentDate.setMonth(currentDate.getMonth() + 1);
+          updateMonthDisplay();
+          generateCalendar();
+        });
+        
+        document.getElementById('task-selector').addEventListener('change', (e) => {
+          selectedTaskId = e.target.value;
+          generateCalendar();
+        });
+        
+      } catch (error) {
+        console.error('LIFF initialization failed', error);
+        document.getElementById('error-message').textContent = 'エラーが発生しました: ' + error.message;
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+      }
+    }
+    
+    // データの読み込み
+    async function loadData() {
+      try {
         // タスク一覧の取得
-        const tasksResponse = await fetch(`https://script.google.com/macros/s/AKfycbynbl-FnkApbF3WvNJPU038DW9bPi7_7sJpnTTP1UPh9TAhRf9AkoAumqciCS9YeruB/exec?action=getTasks&groupId=${groupId}`);
+        const tasksResponse = await fetch(`${GAS_WEBHOOK_URL}?action=getTasks&groupId=${groupId}`);
         const tasksData = await tasksResponse.json();
         
         if (tasksData.success) {
@@ -243,7 +307,7 @@
         }
         
         // ユーザー一覧の取得
-        const usersResponse = await fetch(`https://script.google.com/macros/s/AKfycbynbl-FnkApbF3WvNJPU038DW9bPi7_7sJpnTTP1UPh9TAhRf9AkoAumqciCS9YeruB/exec?action=getGroupUsers&groupId=${groupId}`);
+        const usersResponse = await fetch(`${GAS_WEBHOOK_URL}?action=getGroupUsers&groupId=${groupId}`);
         const usersData = await usersResponse.json();
         
         if (usersData.success) {
@@ -300,7 +364,7 @@
         
         // 完了記録の取得
         const completionsResponse = await fetch(
-          `https://script.google.com/macros/s/AKfycbynbl-FnkApbF3WvNJPU038DW9bPi7_7sJpnTTP1UPh9TAhRf9AkoAumqciCS9YeruB/exec?action=getGroupCompletions&groupId=${groupId}&startDate=${startDate}&endDate=${endDate}`
+          `${GAS_WEBHOOK_URL}?action=getGroupCompletions&groupId=${groupId}&startDate=${startDate}&endDate=${endDate}`
         );
         const completionsData = await completionsResponse.json();
         
@@ -452,65 +516,4 @@
     }
   </script>
 </body>
-</html> LIFFの初期化
-        await liff.init({ liffId: "2007280757-OAJQWGP8" }); // 実際のLIFF IDに置き換えてください
-        
-        // URLパラメータからグループIDを取得
-        const urlParams = new URLSearchParams(window.location.search);
-        groupId = urlParams.get('groupId');
-        
-        // ログインしているかどうかを確認
-        if (!liff.isLoggedIn()) {
-          // ログインしていない場合はログインを促す
-          document.getElementById('auth-message').style.display = 'block';
-          document.getElementById('auth-message').innerHTML = 'LINEログインが必要です。<br><button onclick="liff.login()">ログイン</button>';
-          return;
-        }
-        
-        // ユーザープロフィールの取得
-        const profile = await liff.getProfile();
-        userId = profile.userId;
-        displayName = profile.displayName;
-        
-        // データの読み込み
-        await loadData();
-        
-        // カレンダーの表示
-        document.getElementById('calendar-container').style.display = 'block';
-        
-        // 現在の年月を表示
-        updateMonthDisplay();
-        
-        // カレンダーを生成
-        generateCalendar();
-        
-        // イベントリスナーの追加
-        document.getElementById('prev-month').addEventListener('click', () => {
-          currentDate.setMonth(currentDate.getMonth() - 1);
-          updateMonthDisplay();
-          generateCalendar();
-        });
-        
-        document.getElementById('next-month').addEventListener('click', () => {
-          currentDate.setMonth(currentDate.getMonth() + 1);
-          updateMonthDisplay();
-          generateCalendar();
-        });
-        
-        document.getElementById('task-selector').addEventListener('change', (e) => {
-          selectedTaskId = e.target.value;
-          generateCalendar();
-        });
-        
-      } catch (error) {
-        console.error('LIFF initialization failed', error);
-        document.getElementById('error-message').textContent = 'エラーが発生しました: ' + error.message;
-      } finally {
-        document.getElementById('loading').style.display = 'none';
-      }
-    }
-    
-    // データの読み込み
-    async function loadData() {
-      try {
-        //
+</html>
