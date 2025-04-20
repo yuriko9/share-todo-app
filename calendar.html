@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>タスク完了状況カレンダー</title>
-  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/versions/2.23.1/sdk.js"></script>
   <style>
     body {
       font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
@@ -222,7 +222,7 @@
     async function initializeLiff() {
       try {
         // タスク一覧の取得
-        const tasksResponse = await fetch(`https://script.google.com/macros/s/AKfycbxQjuIi2CZUCWaIzWKnAUjRnVyAV39u48D1pcbgqH0hw0W3P-AEKcJe5PoPtVOxvno/exec?action=getTasks&groupId=${groupId}`);
+        const tasksResponse = await fetch(`https://script.google.com/macros/s/AKfycbynbl-FnkApbF3WvNJPU038DW9bPi7_7sJpnTTP1UPh9TAhRf9AkoAumqciCS9YeruB/exec?action=getTasks&groupId=${groupId}`);
         const tasksData = await tasksResponse.json();
         
         if (tasksData.success) {
@@ -243,7 +243,7 @@
         }
         
         // ユーザー一覧の取得
-        const usersResponse = await fetch(`https://script.google.com/macros/s/AKfycbxQjuIi2CZUCWaIzWKnAUjRnVyAV39u48D1pcbgqH0hw0W3P-AEKcJe5PoPtVOxvno/exec?action=getGroupUsers&groupId=${groupId}`);
+        const usersResponse = await fetch(`https://script.google.com/macros/s/AKfycbynbl-FnkApbF3WvNJPU038DW9bPi7_7sJpnTTP1UPh9TAhRf9AkoAumqciCS9YeruB/exec?action=getGroupUsers&groupId=${groupId}`);
         const usersData = await usersResponse.json();
         
         if (usersData.success) {
@@ -300,7 +300,7 @@
         
         // 完了記録の取得
         const completionsResponse = await fetch(
-          `https://script.google.com/macros/s/AKfycbxQjuIi2CZUCWaIzWKnAUjRnVyAV39u48D1pcbgqH0hw0W3P-AEKcJe5PoPtVOxvno/exec?action=getGroupCompletions&groupId=${groupId}&startDate=${startDate}&endDate=${endDate}`
+          `https://script.google.com/macros/s/AKfycbynbl-FnkApbF3WvNJPU038DW9bPi7_7sJpnTTP1UPh9TAhRf9AkoAumqciCS9YeruB/exec?action=getGroupCompletions&groupId=${groupId}&startDate=${startDate}&endDate=${endDate}`
         );
         const completionsData = await completionsResponse.json();
         
@@ -453,7 +453,7 @@
   </script>
 </body>
 </html> LIFFの初期化
-        await liff.init({ liffId: "2007280757" });
+        await liff.init({ liffId: "2007280757-OAJQWGP8" }); // 実際のLIFF IDに置き換えてください
         
         // URLパラメータからグループIDを取得
         const urlParams = new URLSearchParams(window.location.search);
