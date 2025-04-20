@@ -47,10 +47,25 @@
     window.onload = function() {
       // URLパラメータを解析
       const urlParams = new URLSearchParams(window.location.search);
-      const type = urlParams.get('type');
+      let type = urlParams.get('type');
+      let groupId = urlParams.get('groupId');
       
-      // groupIdと他のパラメータを保持
-      const groupId = urlParams.get('groupId') || '';
+      // liff.stateパラメータがある場合、そこから値を抽出
+      const liffState = urlParams.get('liff.state');
+      if (liffState) {
+        // liff.stateの値をデコード
+        const decodedState = decodeURIComponent(liffState);
+        // ?type=task&groupId=xxx の形式からパラメータを抽出
+        const stateParams = new URLSearchParams(decodedState);
+        
+        // type/groupIdが設定されていなければliff.stateから取得
+        if (!type) type = stateParams.get('type');
+        if (!groupId) groupId = stateParams.get('groupId');
+        
+        console.log('Decoded State:', decodedState);
+        console.log('From liff.state - Type:', type);
+        console.log('From liff.state - GroupId:', groupId);
+      }
       
       // クエリパラメータを構築
       let queryParams = '';
