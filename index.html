@@ -1,22 +1,35 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
   <title>一緒にToDo ♪</title>
   <script>
-    // URLパラメータから必要な情報を取得
-    const urlParams = new URLSearchParams(window.location.search);
-    const page = urlParams.get('page') || 'task';
-    const params = Array.from(urlParams.entries())
-      .filter(([key]) => key !== 'page')
-      .map(([key, value]) => `${key}=${value}`)
-      .join('&');
-    
-    // 適切なページにリダイレクト
-    window.location.href = `${page}.html${params ? '?' + params : ''}`;
+    window.onload = function() {
+      // URLパラメータを解析
+      const urlParams = new URLSearchParams(window.location.search);
+      const type = urlParams.get('type') || '';
+      
+      // groupIdを保持
+      const groupId = urlParams.get('groupId') || '';
+      
+      // クエリパラメータを構築
+      let queryParams = '';
+      if (groupId) {
+        queryParams = '?groupId=' + encodeURIComponent(groupId);
+      }
+      
+      // タイプに応じてリダイレクト
+      if (type === 'calendar') {
+        window.location.href = './calendar.html' + queryParams;
+      } else if (type === 'task') {
+        window.location.href = './task.html' + queryParams;
+      }
+      // typeが指定されていない場合はリダイレクトしない
+    };
   </script>
 </head>
 <body>
+  <h1>一緒にToDo ♪</h1>
   <p>リダイレクト中...</p>
 </body>
 </html>
